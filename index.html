@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Ache sua Foto | Em Breve</title>
+    <style>
+      /* Reset básico e Fontes */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+          Arial, sans-serif;
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #1f2937;
+      }
+
+      /* Card Central */
+      .card {
+        background: white;
+        width: 100%;
+        max-width: 400px;
+        padding: 40px 30px;
+        border-radius: 24px;
+        text-align: center;
+        box-shadow:
+          0 10px 25px -5px rgba(0, 0, 0, 0.1),
+          0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.8s ease-out;
+      }
+
+      /* Ícone Animado */
+      .icon-container {
+        width: 80px;
+        height: 80px;
+        background-color: #eff6ff;
+        color: #2563eb;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 24px auto;
+      }
+
+      .icon-container svg {
+        width: 40px;
+        height: 40px;
+      }
+
+      /* Tipografia */
+      h1 {
+        font-size: 24px;
+        font-weight: 800;
+        margin-bottom: 12px;
+        color: #111827;
+        letter-spacing: -0.5px;
+      }
+
+      p {
+        font-size: 16px;
+        color: #6b7280;
+        line-height: 1.5;
+        margin-bottom: 24px;
+      }
+
+      /* Badge de Data */
+      .date-badge {
+        display: inline-block;
+        background-color: #f3f4f6;
+        padding: 12px 20px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+      }
+
+      .date-title {
+        display: block;
+        text-transform: uppercase;
+        font-size: 10px;
+        font-weight: 700;
+        color: #9ca3af;
+        margin-bottom: 4px;
+        letter-spacing: 1px;
+      }
+
+      .date-value {
+        font-size: 18px;
+        font-weight: 700;
+        color: #2563eb;
+      }
+
+      /* Footer simples */
+      .footer {
+        margin-top: 30px;
+        font-size: 12px;
+        color: #9ca3af;
+      }
+
+      /* Animação de entrada */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon-container">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+          />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+          />
+        </svg>
+      </div>
+
+      <h1>Sistema em Preparação</h1>
+      <p>
+        Estamos configurando tudo para você baixar suas fotos com rapidez e
+        segurança.
+      </p>
+
+      <div class="date-badge">
+        <span class="date-title">Disponível em</span>
+        <span class="date-value">07 e 08 de Fev</span>
+      </div>
+
+      <div class="footer">Acesso exclusivo via QR Code</div>
+    </div>
+  </body>
+</html>
