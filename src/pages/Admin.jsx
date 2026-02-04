@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     LogOut, UploadCloud, CheckCircle2, AlertCircle, Loader2,
     Trash2, ChevronLeft, ChevronRight, Search, Image as ImageIcon,
-    Maximize2, ArrowLeft, FileText, XCircle
+    Maximize2, ArrowLeft, FileText, XCircle, CheckSquare, Square
 } from 'lucide-react';
 
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
@@ -21,17 +21,19 @@ export default function Admin() {
     const [dia, setDia] = useState('07');
     const [mensagem, setMensagem] = useState({ type: '', text: '' });
 
-    // RELATÓRIO DE ERROS
+    // RELATÓRIOS E PROGRESSO
     const [errosUpload, setErrosUpload] = useState([]);
-
     const [progresso, setProgresso] = useState({ processados: 0, total: 0, porcentagem: 0 });
+
+    // ESTADOS DA LISTA E SELEÇÃO
     const [fotos, setFotos] = useState([]);
+    const [selectedIds, setSelectedIds] = useState([]); // <--- NOVO: IDs SELECIONADOS
     const [loadingList, setLoadingList] = useState(false);
     const [pagina, setPagina] = useState(1);
     const [busca, setBusca] = useState('');
     const itensPorPagina = 10;
-    const [previewFoto, setPreviewFoto] = useState(null);
 
+    const [previewFoto, setPreviewFoto] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -44,8 +46,10 @@ export default function Admin() {
 
     useEffect(() => {
         fetchFotos();
+        setSelectedIds([]); // Limpa seleção ao mudar filtros
     }, [pagina, busca, dia]);
 
+    // PROTEÇÃO CONTRA FECHAMENTO ACIDENTAL
     useEffect(() => {
         const handleBeforeUnload = (e) => {
             if (loading) {
@@ -86,6 +90,56 @@ export default function Admin() {
         navigate('/login');
     }
 
+    // --- LÓGICA DE SELEÇÃO MÚLTIPLA ---
+    const toggleSelect = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedIds.length === fotos.length) {
+            setSelectedIds([]); // Desmarcar tudo
+        } else {
+            setSelectedIds(fotos.map(f => f.id)); // Marcar tudo da página atual
+        }
+    };
+
+    // --- DELETAR EM MASSA ---
+    async function handleBulkDelete() {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`TEM CERTEZA? Você vai apagar ${selectedIds.length} fotos permanentemente!`)) return;
+
+        // Recupera os objetos completos para ter a URL (necessário para o R2)
+        const fotosParaDeletar = fotos.filter(f => selectedIds.includes(f.id));
+
+        // Remove da tela imediatamente (Optimistic UI)
+        setFotos(prev => prev.filter(f => !selectedIds.includes(f.id)));
+        setSelectedIds([]); // Limpa seleção
+
+        try {
+            // 1. Deleta do R2
+            await Promise.all(fotosParaDeletar.map(async (foto) => {
+                const nomeArquivo = foto.url_imagem.split('/').pop();
+                const key = `${foto.dia_evento}/${nomeArquivo}`;
+                await r2.send(new DeleteObjectCommand({ Bucket: "fotos-evento", Key: key }));
+            }));
+
+            // 2. Deleta do Supabase
+            const { error } = await supabase.from('fotos').delete().in('id', selectedIds);
+            if (error) throw error;
+
+            setMensagem({ type: 'success', text: `${fotosParaDeletar.length} fotos apagadas!` });
+            fetchFotos(); // Recarrega para garantir
+
+        } catch (error) {
+            console.error(error);
+            setMensagem({ type: 'error', text: "Erro ao apagar alguns itens." });
+            fetchFotos(); // Recarrega se der erro
+        }
+    }
+
+    // Deletar Individual (Mantido para o botão da lixeira e preview)
     async function handleDelete(id, url, diaEvento, e) {
         if (e) e.stopPropagation();
         if (!confirm("Tem certeza que quer apagar essa foto?")) return;
@@ -95,7 +149,6 @@ export default function Admin() {
         try {
             const nomeArquivo = url.split('/').pop();
             const key = `${diaEvento}/${nomeArquivo}`;
-
             await r2.send(new DeleteObjectCommand({ Bucket: "fotos-evento", Key: key }));
             await supabase.from('fotos').delete().eq('id', id);
 
@@ -123,7 +176,6 @@ export default function Admin() {
 
         const BATCH_SIZE = 20;
         const publicUrlBase = import.meta.env.VITE_R2_PUBLIC_URL;
-
         let contSucessos = 0;
         let listaFalhas = [];
 
@@ -133,20 +185,10 @@ export default function Admin() {
 
                 await Promise.all(chunk.map(async (file) => {
                     try {
-                        // REGEX ESTRITA: OBRIGA COMEÇAR COM BBD_ SEGUIDO DE NÚMEROS
-                        // ^ = Início da string
-                        // BBD_ = Texto obrigatório (case insensitive devido ao flag 'i')
-                        // (\d+) = Captura os números logo depois
                         const match = file.name.match(/^BBD_(\d+)/i);
+                        if (!match) throw new Error("Nome inválido. Deve começar com 'BBD_' e ter um número.");
 
-                        if (!match) {
-                            throw new Error("Nome inválido. Deve começar com 'BBD_' e ter um número.");
-                        }
-
-                        // match[1] pega o grupo dos números capturados
                         const numeroInt = parseInt(match[1]);
-
-                        // PADRONIZAÇÃO (Transforma BBD_1.jpg em BBD_0001.jpg)
                         const formatado = numeroInt.toString().padStart(4, '0');
                         const fileName = `BBD_${formatado}.jpg`;
                         const fullPath = `${dia}/${fileName}`;
@@ -154,18 +196,14 @@ export default function Admin() {
                         const arrayBuffer = await file.arrayBuffer();
                         const fileBuffer = new Uint8Array(arrayBuffer);
 
-                        // UPLOAD R2
                         await r2.send(new PutObjectCommand({
                             Bucket: "fotos-evento", Key: fullPath, Body: fileBuffer,
                             ContentType: "image/jpeg", ContentLength: fileBuffer.length,
                         }));
 
-                        // SUPABASE
                         await supabase.from('fotos').insert([{
-                            numero_foto: numeroInt,
-                            dia_evento: dia,
-                            url_imagem: `${publicUrlBase}/${fullPath}`,
-                            nome_original: file.name
+                            numero_foto: numeroInt, dia_evento: dia,
+                            url_imagem: `${publicUrlBase}/${fullPath}`, nome_original: file.name
                         }]);
 
                         contSucessos++;
@@ -177,18 +215,14 @@ export default function Admin() {
 
                 const processadosAtual = Math.min(i + BATCH_SIZE, files.length);
                 setProgresso({
-                    processados: processadosAtual,
-                    total: files.length,
+                    processados: processadosAtual, total: files.length,
                     porcentagem: Math.round((processadosAtual / files.length) * 100)
                 });
             }
 
-            // FINALIZAÇÃO
             setErrosUpload(listaFalhas);
-
             if (listaFalhas.length > 0) {
-                // ALERTA VISUAL
-                alert(`⚠️ ATENÇÃO: ${listaFalhas.length} arquivos foram REJEITADOS!\n\nEles não seguiam o padrão "BBD_Número".\nVerifique a lista vermelha abaixo do botão.`);
+                alert(`⚠️ ATENÇÃO: ${listaFalhas.length} arquivos foram REJEITADOS!\n\nVerifique a lista vermelha abaixo.`);
                 setMensagem({ type: 'error', text: `Concluído com ${listaFalhas.length} falhas.` });
             } else {
                 setMensagem({ type: 'success', text: `Sucesso total! ${contSucessos} fotos enviadas.` });
@@ -207,8 +241,9 @@ export default function Admin() {
     }
 
     return (
-        <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center p-6 relative overflow-x-hidden font-sans">
-            {/* BACKGROUND */}
+        <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center p-6 relative overflow-x-hidden font-sans pb-24">
+
+            {/* FAIXA DIAGONAL */}
             <div className="fixed inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none z-0">
                 <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
                     {[...Array(6)].map((_, i) => (
@@ -221,6 +256,19 @@ export default function Admin() {
                     ))}
                 </div>
             </div>
+
+            {/* BARRA FLUTUANTE DE EXCLUSÃO (APARECE QUANDO SELECIONA) */}
+            {selectedIds.length > 0 && (
+                <div className="fixed bottom-6 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300">
+                    <button
+                        onClick={handleBulkDelete}
+                        className="bg-red-600 text-white font-[900] px-8 py-4 rounded-full shadow-[0_10px_0_0_#991b1b] border-4 border-white flex items-center gap-3 text-lg hover:bg-red-500 active:translate-y-1 active:shadow-[0_0px_0_0_#991b1b] transition-all"
+                    >
+                        <Trash2 size={24} />
+                        EXCLUIR {selectedIds.length} FOTOS
+                    </button>
+                </div>
+            )}
 
             {/* PREVIEW */}
             {previewFoto && (
@@ -309,7 +357,6 @@ export default function Admin() {
                         </div>
                     )}
 
-                    {/* ÁREA DE LISTA DE ERROS (VERMELHA) */}
                     {errosUpload.length > 0 && (
                         <div className="w-full bg-red-50 border-4 border-red-100 rounded-2xl p-4 mt-4 animate-in fade-in">
                             <div className="flex items-center gap-2 text-red-600 mb-2">
@@ -330,7 +377,20 @@ export default function Admin() {
 
                 <div className="flex flex-col gap-4">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-lg font-[900] text-[#4e3629] uppercase italic">Fotos do Dia {dia}</h2>
+                        <div className="flex items-center gap-2">
+                            {/* SELEÇÃO EM MASSA: BOTÃO MARCAR TUDO */}
+                            <button
+                                onClick={toggleSelectAll}
+                                className="p-2 bg-gray-100 hover:bg-[#0072bc] hover:text-white rounded-lg transition-colors text-gray-500"
+                                title="Selecionar Todos Desta Página"
+                            >
+                                {selectedIds.length === fotos.length && fotos.length > 0 ? <CheckSquare size={20} /> : <Square size={20} />}
+                            </button>
+                            <div>
+                                <h2 className="text-lg font-[900] text-[#4e3629] uppercase italic leading-none">Fotos Dia {dia}</h2>
+                                {selectedIds.length > 0 && <span className="text-[10px] font-bold text-[#0072bc] uppercase">{selectedIds.length} selecionadas</span>}
+                            </div>
+                        </div>
                         <span className="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">Total: {fotos.length > 0 ? 'Recente' : 0}</span>
                     </div>
 
@@ -346,11 +406,23 @@ export default function Admin() {
                             <div className="flex flex-col items-center justify-center h-40 text-gray-300 border-2 border-dashed border-gray-100 rounded-2xl"><ImageIcon size={32} className="mb-2 opacity-50" /><p className="text-xs font-bold">Nenhuma foto encontrada</p></div>
                         ) : (
                             fotos.map((foto) => (
-                                <div key={foto.id} onClick={() => setPreviewFoto(foto)} className="flex items-center justify-between bg-gray-50 p-2 rounded-xl border-2 border-transparent hover:border-[#0072bc] hover:bg-blue-50 cursor-pointer transition-all group">
+                                <div
+                                    key={foto.id}
+                                    // CLIQUE NO CARD ABRE PREVIEW (Exceto se clicar no checkbox)
+                                    onClick={() => setPreviewFoto(foto)}
+                                    className={`flex items-center justify-between p-2 rounded-xl border-2 transition-all group cursor-pointer ${selectedIds.includes(foto.id) ? 'bg-blue-50 border-[#0072bc]' : 'bg-gray-50 border-transparent hover:border-gray-200'}`}
+                                >
                                     <div className="flex items-center gap-3">
+                                        {/* CHECKBOX DE SELEÇÃO */}
+                                        <div
+                                            onClick={(e) => { e.stopPropagation(); toggleSelect(foto.id); }}
+                                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${selectedIds.includes(foto.id) ? 'bg-[#0072bc] text-white' : 'bg-gray-200 text-gray-400 hover:bg-gray-300'}`}
+                                        >
+                                            {selectedIds.includes(foto.id) ? <CheckSquare size={18} /> : <Square size={18} />}
+                                        </div>
+
                                         <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-gray-200 bg-white relative">
                                             <img src={foto.url_imagem} alt={`Foto ${foto.numero_foto}`} className="w-full h-full object-cover" />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 flex items-center justify-center transition-all"><Maximize2 size={16} className="text-white opacity-0 group-hover:opacity-100 drop-shadow-md" /></div>
                                         </div>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-[900] text-[#4e3629]">#{foto.numero_foto.toString().padStart(4, '0')}</span>
