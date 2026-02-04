@@ -1,16 +1,60 @@
-# React + Vite
+# 📸 Ache sua Foto | Stand M&M's & Snickers
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> Sistema de entrega automatizada de fotos desenvolvido para ativação de marca em parceria com agência de Marketing e Publicidade.
 
-Currently, two official plugins are available:
+Este projeto foi concebido para atender à demanda de um stand de fotos durante um evento de grande porte (estimativa de 8.000 pessoas/dia). A solução permite que participantes localizem e baixem suas fotos de forma individual, rápida e segura através de um QR Code.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## 🍬 O Projeto
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Durante os dias 07 e 08 de fevereiro de 2026, participantes tiram fotos profissionais no stand das marcas **M&M's** e **Snickers**. O desafio era criar uma plataforma **Mobile First** que eliminasse a necessidade de galerias públicas, garantindo a privacidade de cada usuário.
 
-## Expanding the ESLint configuration
+### 🚀 Funcionalidades Principais
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+* **Busca Individual:** Localização de fotos através de número sequencial informado pelo fotógrafo.
+* **Filtro por Data:** Seletor intuitivo para os dias 07 e 08 de fevereiro.
+* **Download Inteligente:** Botão de download direto via Blob para garantir compatibilidade com dispositivos móveis.
+* **Segurança (Anti-Spam):** Sistema de *Cooldown* de 10 minutos por dispositivo (LocalStorage) para evitar acessos repetitivos.
+* **Privacidade Total:** Implementação de `noindex` para motores de busca e ausência de navegação entre fotos de terceiros.
+* **Painel Administrativo:** Área restrita para fotógrafos com upload automatizado e padronização de nomenclatura (`BBD_XXXX.jpg`).
+
+---
+
+## 🛠️ Stack Tecnológica
+
+O projeto utiliza o que há de mais moderno em desenvolvimento Web para garantir escala e performance sob alto tráfego:
+
+* **Frontend:** [React.js](https://reactjs.org/) + [Vite](https://vitejs.dev/)
+* **Estilização:** [Tailwind CSS](https://tailwindcss.com/) (Design Temático Candy)
+* **Banco de Dados & Auth:** [Supabase](https://supabase.com/)
+* **Storage (CDN):** [Cloudflare R2](https://www.cloudflare.com/products/r2/) (S3 Compatible)
+* **Hospedagem:** [Vercel](https://vercel.com/)
+* **Ícones:** [Lucide React](https://lucide.dev/)
+
+---
+
+## 📐 Arquitetura e Performance
+
+Para suportar múltiplos acessos simultâneos em redes 4G instáveis:
+1.  **Otimização de Imagem:** Limite de 5MB por upload para garantir fluidez no download.
+2.  **Padronização:** O sistema trata entradas numéricas (ex: "1") e converte para o padrão de quatro dígitos exigido (`BBD_0001`).
+3.  **Entrega via Edge:** Uso do Cloudflare R2 para baixa latência na entrega das imagens.
+
+---
+
+## 🛡️ Regras de Negócio e Segurança
+
+* **Não indexação:** O site não aparece em buscas do Google, protegendo a imagem dos participantes.
+* **Sem Galeria:** A única forma de acessar uma foto é possuindo o número exato.
+* **Operação Autônoma:** Sistema projetado para funcionar sem intervenção humana após o upload inicial do fotógrafo.
+
+---
+
+## 👤 Desenvolvedor
+
+**[Yssaky Assad Luz]** *Estudante de Bacharelado em Ciência da Computação – Faculdade São Judas Tadeu* Passonado por tecnologia, desenvolvimento Fullstack e soluções escaláveis.
+
+---
+
+*Este projeto é fruto de uma colaboração estratégica entre tecnologia de ponta e estratégias de marketing de experiência para marcas globais.*
