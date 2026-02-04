@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search, Download, AlertCircle, Camera, Loader2 } from 'lucide-react';
+import { Search, Download, AlertCircle, Loader2 } from 'lucide-react';
 
-
-// IMPORTAÇÃO DAS IMAGENS
+// IMPORTAÇÃO DAS IMAGENS REAIS
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
 import pacoteMM from '../imgs/PacotedeMM.png';
 import logoSnickers from '../imgs/LogoSnickers.png';
@@ -33,7 +32,6 @@ export default function Home() {
 
             if (error) throw error;
             if (data && data.length > 0) {
-                // Pega a última entrada caso haja duplicidade
                 setFoto(data[data.length - 1].url_imagem);
             } else {
                 setErro('Putz! Foto não encontrada. Veja se o número está certo!');
@@ -51,22 +49,18 @@ export default function Home() {
         try {
             const resposta = await fetch(url, { mode: 'cors' });
             if (!resposta.ok) throw new Error('Falha ao acessar a imagem');
-
             const blob = await resposta.blob();
             const urlBlob = window.URL.createObjectURL(blob);
-
             const link = document.createElement('a');
             link.href = urlBlob;
-            link.setAttribute('download', `MMS_SNICKERS_FOTO_${nomeFoto}.jpg`);
+            link.setAttribute('download', `FOTO_${nomeFoto}.jpg`);
             document.body.appendChild(link);
             link.click();
-
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
         } catch (err) {
-            console.error("Download falhou, abrindo fallback:", err);
             window.open(url, '_blank');
-            alert("A foto abriu em uma nova aba! Segure o dedo nela para salvar na galeria! 🍫");
+            alert("A foto abriu em uma nova aba! Segure o dedo nela para salvar! 🍫");
         } finally {
             setDownloading(false);
         }
@@ -75,8 +69,7 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center relative overflow-hidden font-sans">
 
-            {/* FAIXA GSAP/CSS INFINITA - BACKGROUND CENTRALIZADO */}
-            {/* Mudei 'top-24' para 'top-1/2 -translate-y-1/2' para centralizar verticalmente */}
+            {/* FAIXA INFINITA CENTRALIZADA */}
             <div className="absolute top-1/2 -translate-y-1/2 left-0 w-full opacity-30 pointer-events-none -rotate-6">
                 <div className="w-[200%] flex gap-24 animate-marquee whitespace-nowrap py-4 items-center">
                     {[...Array(6)].map((_, i) => (
@@ -92,8 +85,9 @@ export default function Home() {
 
             <div className="z-20 w-full flex flex-col items-center px-4">
                 <header className="flex flex-col items-center pt-12 pb-8">
+                    {/* ÍCONE DO BONECO M&M NO LUGAR DA CÂMERA */}
                     <div className="bg-[#df0024] p-5 rounded-full mb-4 shadow-[0_8px_0_0_#a0001a] border-4 border-white animate-bounce">
-                        <Camera size={40} className="text-white" />
+                        <img src={bonecoMM} className="w-12 h-12 object-contain" alt="M&M Logo" />
                     </div>
                     <h1 className="text-4xl font-[900] text-[#4e3629] tracking-tighter text-center uppercase italic">
                         Ache sua <span className="text-[#0072bc]">Foto!</span>
@@ -102,7 +96,6 @@ export default function Home() {
 
                 <div className="w-full max-w-md bg-white p-8 rounded-[3rem] shadow-[0_12px_0_0_#4e3629] border-4 border-[#4e3629] mb-12">
                     <form onSubmit={buscarFoto} className="flex flex-col gap-6">
-                        {/* Seletor de Dia Snickers Style */}
                         <div className="flex bg-[#4e3629] p-2 rounded-full border-2 border-[#4e3629]">
                             <button
                                 type="button"
@@ -122,7 +115,6 @@ export default function Home() {
                             </button>
                         </div>
 
-                        {/* Input por Número */}
                         <div className="relative">
                             <input
                                 type="number"
@@ -139,11 +131,7 @@ export default function Home() {
                             className={`w-full p-5 rounded-3xl font-black text-xl text-white transition-all active:scale-95 shadow-[0_8px_0_0_#a0001a] ${loading ? 'bg-gray-400 shadow-none' : 'bg-[#df0024] hover:bg-[#ff002a]'
                                 }`}
                         >
-                            {loading ? (
-                                <div className="flex items-center justify-center gap-2">
-                                    <Loader2 className="animate-spin" /> BUSCANDO...
-                                </div>
-                            ) : 'VER MINHA FOTO 🍫'}
+                            {loading ? <div className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" /> BUSCANDO...</div> : 'VER MINHA FOTO 🍫'}
                         </button>
                     </form>
 
@@ -159,39 +147,21 @@ export default function Home() {
                             <div className="relative rounded-[2rem] overflow-hidden border-8 border-gray-100 shadow-2xl">
                                 <img src={foto} alt="Sua foto encontrada" className="w-full h-auto" />
                             </div>
-
                             <button
                                 onClick={() => baixarImagem(foto, numero)}
                                 disabled={downloading}
                                 className="mt-6 flex items-center justify-center gap-2 w-full p-5 bg-[#00aa55] text-white rounded-3xl font-black text-xl shadow-[0_8px_0_0_#007a3d] active:scale-95 transition-all hover:bg-[#00c060]"
                             >
-                                {downloading ? (
-                                    <Loader2 className="animate-spin" />
-                                ) : (
-                                    <Download size={24} />
-                                )}
+                                {downloading ? <Loader2 className="animate-spin" /> : <Download size={24} />}
                                 {downloading ? 'BAIXANDO...' : 'BAIXAR FOTO'}
                             </button>
                         </div>
                     )}
                 </div>
             </div>
-
-            <footer className="mt-auto py-8 z-10">
-                <p className="text-[#4e3629] text-[10px] font-black tracking-widest uppercase opacity-50 text-center">
-                    M&M's & SNICKERS Stand • 2026
-                </p>
-            </footer>
-
-            {/* ESTILO DA ANIMAÇÃO INFINITA */}
             <style>{`
-                @keyframes marquee {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
-                }
-                .animate-marquee {
-                    animation: marquee 30s linear infinite;
-                }
+                @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+                .animate-marquee { animation: marquee 30s linear infinite; }
             `}</style>
         </div>
     );
