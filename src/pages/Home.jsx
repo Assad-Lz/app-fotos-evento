@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Download, AlertCircle, Loader2, X, Clock } from 'lucide-react';
 
-// ATIVOS VISUAIS
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
 import pacoteMM from '../imgs/PacotedeMM.png';
 import logoSnickers from '../imgs/LogoSnickers.png';
 import barraSnickers from '../imgs/barrasnickers.png';
 
-// CONFIGURAÇÃO DA TRAVA (10 MINUTOS)
 const COOLDOWN_MINUTES = 10;
 const COOLDOWN_TIME = COOLDOWN_MINUTES * 60 * 1000;
 
@@ -20,11 +18,9 @@ export default function Home() {
     const [downloading, setDownloading] = useState(false);
     const [erro, setErro] = useState('');
 
-    // ESTADOS DO MODAL DE SEGURANÇA
     const [showModal, setShowModal] = useState(false);
     const [minutosRestantes, setMinutosRestantes] = useState(0);
 
-    // FUNÇÃO PARA CALCULAR TEMPO DE ESPERA
     const obterTempoRestante = (num, d) => {
         const lastDownload = localStorage.getItem(`ld_${d}_${num}`);
         if (lastDownload) {
@@ -40,7 +36,6 @@ export default function Home() {
         e.preventDefault();
         if (!numero) return;
 
-        // VERIFICA SE O USUÁRIO JÁ BAIXOU ESSA FOTO NOS ÚLTIMOS 10 MIN
         const tempo = obterTempoRestante(numero, dia);
         if (tempo > 0) {
             setMinutosRestantes(tempo);
@@ -63,7 +58,8 @@ export default function Home() {
             if (data && data.length > 0) {
                 setFoto(data[data.length - 1].url_imagem);
             } else {
-                setErro('Putz! Foto não encontrada. Veja se o número está certo!');
+                // MENSAGEM DE ERRO ATUALIZADA
+                setErro('Foto não encontrada. Veja se o número está certo!');
             }
         } catch (err) {
             setErro('Erro na busca. Tente de novo!');
@@ -86,10 +82,8 @@ export default function Home() {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
 
-            // REGISTRA O DOWNLOAD NO LOCALSTORAGE PARA ATIVAR A TRAVA
             localStorage.setItem(`ld_${dia}_${numero}`, Date.now().toString());
 
-            // LIMPA OS DADOS PARA EVITAR MULTIDOWNLOADS SEGUIDOS
             setTimeout(() => {
                 setFoto(null);
                 setNumero('');
@@ -104,8 +98,6 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center relative overflow-hidden font-sans">
-
-            {/* FAIXA DIAGONAL DE LOGOS */}
             <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none">
                 <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
                     {[...Array(6)].map((_, i) => (
@@ -173,7 +165,6 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* POP-UP DE SEGURANÇA (MODAL) */}
             {showModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#4e3629]/80 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="bg-white w-full max-w-sm rounded-[3rem] border-4 border-[#4e3629] shadow-[0_15px_0_0_#4e3629] overflow-hidden animate-in zoom-in duration-300">
