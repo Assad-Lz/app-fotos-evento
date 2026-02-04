@@ -1,11 +1,16 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { Search, Download, AlertCircle, Loader2 } from 'lucide-react';
+import { Search, Download, AlertCircle, Loader2, X, Clock } from 'lucide-react';
 
+// ATIVOS VISUAIS
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
 import pacoteMM from '../imgs/PacotedeMM.png';
 import logoSnickers from '../imgs/LogoSnickers.png';
 import barraSnickers from '../imgs/barrasnickers.png';
+
+// CONFIGURAÇÃO DA TRAVA (10 MINUTOS)
+const COOLDOWN_MINUTES = 10;
+const COOLDOWN_TIME = COOLDOWN_MINUTES * 60 * 1000;
 
 export default function Home() {
     const [numero, setNumero] = useState('');
@@ -15,9 +20,34 @@ export default function Home() {
     const [downloading, setDownloading] = useState(false);
     const [erro, setErro] = useState('');
 
+    // ESTADOS DO MODAL DE SEGURANÇA
+    const [showModal, setShowModal] = useState(false);
+    const [minutosRestantes, setMinutosRestantes] = useState(0);
+
+    // FUNÇÃO PARA CALCULAR TEMPO DE ESPERA
+    const obterTempoRestante = (num, d) => {
+        const lastDownload = localStorage.getItem(`ld_${d}_${num}`);
+        if (lastDownload) {
+            const diff = Date.now() - parseInt(lastDownload);
+            if (diff < COOLDOWN_TIME) {
+                return Math.ceil((COOLDOWN_TIME - diff) / 60000);
+            }
+        }
+        return 0;
+    };
+
     async function buscarFoto(e) {
         e.preventDefault();
         if (!numero) return;
+
+        // VERIFICA SE O USUÁRIO JÁ BAIXOU ESSA FOTO NOS ÚLTIMOS 10 MIN
+        const tempo = obterTempoRestante(numero, dia);
+        if (tempo > 0) {
+            setMinutosRestantes(tempo);
+            setShowModal(true);
+            return;
+        }
+
         setLoading(true);
         setErro('');
         setFoto(null);
@@ -55,6 +85,16 @@ export default function Home() {
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
+
+            // REGISTRA O DOWNLOAD NO LOCALSTORAGE PARA ATIVAR A TRAVA
+            localStorage.setItem(`ld_${dia}_${numero}`, Date.now().toString());
+
+            // LIMPA OS DADOS PARA EVITAR MULTIDOWNLOADS SEGUIDOS
+            setTimeout(() => {
+                setFoto(null);
+                setNumero('');
+            }, 1000);
+
         } catch (err) {
             window.open(url, '_blank');
         } finally {
@@ -65,7 +105,7 @@ export default function Home() {
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center relative overflow-hidden font-sans">
 
-            {/* FAIXA DIAGONAL PARA MAIOR VISIBILIDADE NO MOBILE */}
+            {/* FAIXA DIAGONAL DE LOGOS */}
             <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none">
                 <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
                     {[...Array(6)].map((_, i) => (
@@ -132,6 +172,37 @@ export default function Home() {
                     )}
                 </div>
             </div>
+
+            {/* POP-UP DE SEGURANÇA (MODAL) */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#4e3629]/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-white w-full max-w-sm rounded-[3rem] border-4 border-[#4e3629] shadow-[0_15px_0_0_#4e3629] overflow-hidden animate-in zoom-in duration-300">
+                        <div className="bg-[#0072bc] p-6 flex flex-col items-center relative">
+                            <button onClick={() => setShowModal(false)} className="absolute top-4 right-4 text-white/50 hover:text-white">
+                                <X size={24} />
+                            </button>
+                            <div className="bg-white p-4 rounded-full shadow-lg mb-4">
+                                <Clock size={40} className="text-[#df0024]" />
+                            </div>
+                            <h2 className="text-2xl font-[900] text-white italic uppercase tracking-tighter">Calma lá! 🍫</h2>
+                        </div>
+                        <div className="p-8 text-center">
+                            <p className="text-[#4e3629] font-bold text-lg leading-tight mb-6">
+                                Por segurança, você só pode baixar a mesma foto uma vez a cada {COOLDOWN_MINUTES} minutos.
+                            </p>
+                            <div className="bg-gray-100 p-4 rounded-2xl mb-8">
+                                <p className="text-xs font-black text-[#0072bc] uppercase tracking-widest mb-1">Tempo Restante</p>
+                                <p className="text-3xl font-black text-[#4e3629]">{minutosRestantes} MIN</p>
+                            </div>
+                            <button onClick={() => setShowModal(false)}
+                                className="w-full p-4 bg-[#df0024] text-white rounded-2xl font-black text-lg shadow-[0_6px_0_0_#a0001a] active:scale-95 transition-all">
+                                ENTENDI!
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
                 .animate-marquee { animation: marquee 30s linear infinite; }
