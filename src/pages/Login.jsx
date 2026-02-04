@@ -3,10 +3,10 @@ import { supabase } from '../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 
-// IMPORTAÇÃO DOS ATIVOS PARA O BACKGROUND
-// (Verifique se o caminho da pasta é '../img/' ou '../imgs/' conforme seu projeto atual)
-import bonecoMM from '../imgs/boneco_vermelho_mm.png';
-import logoSnickers from '../imgs/LogoSnickers.png';
+// NOVAS LOGOS PARA O BACKGROUND (SVG)
+import logoMM from '../imgs/MMS_MARCA.svg';
+import logoSnickers from '../imgs/SNICKERS_MARCA.PNG';
+import logoTwix from '../imgs/TWIX_MARCA.PNG';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -27,19 +27,22 @@ export default function Login() {
         setLoading(false);
     }
 
-    // Função para gerar o padrão de fundo
+    // FUNÇÃO ATUALIZADA PARA RODAR AS 3 MARCAS SVG
     const renderBackgroundPattern = () => {
         return Array.from({ length: 30 }).map((_, i) => {
-            const imgSource = i % 2 === 0 ? bonecoMM : logoSnickers;
-            // Aumentei um pouco o tamanho base dos elementos também
-            const sizeClass = i % 2 === 0 ? 'h-28 md:h-36' : 'h-14 md:h-20';
+
+            // Alterna entre M&M, Snickers e Twix
+            const images = [logoMM, logoSnickers, logoTwix];
+            const imgSource = images[i % 3];
+
+            // Ajuste fino do tamanho para ficar harmonico
+            const sizeClass = 'h-14 md:h-20';
             const rotation = i % 3 === 0 ? 'rotate-12' : i % 3 === 1 ? '-rotate-12' : 'rotate-45';
 
             return (
                 <div key={i} className="flex items-center justify-center p-4">
                     <img
                         src={imgSource}
-                        // Adicionei drop-shadow-xl para destacar mais do fundo azul
                         className={`w-auto object-contain drop-shadow-xl transition-transform ${sizeClass} ${rotation}`}
                         alt="background pattern"
                     />
@@ -51,8 +54,7 @@ export default function Login() {
     return (
         <div className="min-h-screen bg-[#0034a1] flex items-center justify-center p-4 relative overflow-hidden font-sans">
 
-            {/* BACKGROUND PATTERN MULTIPLICADO - MAIS VISÍVEL */}
-            {/* MUDANÇA AQUI: De opacity-10 para opacity-30 */}
+            {/* BACKGROUND PATTERN ATUALIZADO */}
             <div className="absolute inset-0 z-0 opacity-30 pointer-events-none select-none overflow-hidden">
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-6 w-[120%] h-[120%] -ml-[10%] -mt-[10%] animate-pulse-slow">
                     {renderBackgroundPattern()}
@@ -93,7 +95,6 @@ export default function Login() {
             </form>
 
             <style>{`
-                /* Ajustei a animação para pulsar apenas o tamanho, mantendo a opacidade fixa */
                 @keyframes pulse-slow {
                     0%, 100% { transform: scale(1); }
                     50% { transform: scale(1.05); }

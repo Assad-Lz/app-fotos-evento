@@ -9,10 +9,13 @@ import {
     Maximize2, ArrowLeft, FileText, XCircle, CheckSquare, Square, Layers, ListChecks
 } from 'lucide-react';
 
+// IMAGEM DO BONECO (MANTIDA NO HEADER)
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
-import pacoteMM from '../imgs/PacotedeMM.png';
-import logoSnickers from '../imgs/LogoSnickers.png';
-import barraSnickers from '../imgs/barrasnickers.png';
+
+// NOVAS LOGOS PARA O BACKGROUND (SVG)
+import logoMM from '../imgs/MMS_MARCA.svg';
+import logoSnickers from '../imgs/SNICKERS_MARCA.PNG';
+import logoTwix from '../imgs/TWIX_MARCA.PNG';
 
 export default function Admin() {
     // UPLOAD
@@ -25,11 +28,11 @@ export default function Admin() {
 
     // LISTA E SELEÇÃO
     const [fotos, setFotos] = useState([]);
-    const [totalFotosDia, setTotalFotosDia] = useState(0); // Total real no banco
+    const [totalFotosDia, setTotalFotosDia] = useState(0);
 
     // ESTADOS DE SELEÇÃO
     const [selectedIds, setSelectedIds] = useState([]);
-    const [isGlobalSelection, setIsGlobalSelection] = useState(false); // TRUE = Selecionou TODAS do dia
+    const [isGlobalSelection, setIsGlobalSelection] = useState(false);
 
     const [loadingList, setLoadingList] = useState(false);
     const [pagina, setPagina] = useState(1);
@@ -39,6 +42,15 @@ export default function Admin() {
     const [previewFoto, setPreviewFoto] = useState(null);
     const navigate = useNavigate();
 
+    // --- PREPARAÇÃO DA FAIXA DE BACKGROUND (CORREÇÃO) ---
+    // Cria uma lista única repetindo o padrão 6 vezes para garantir que fiquem lado a lado
+    const marcasParaFaixa = [...Array(6)].flatMap(() => [
+        { src: logoMM, height: 'h-20', rotate: 'rotate-12' },
+        { src: logoSnickers, height: 'h-14', rotate: '-rotate-6' },
+        { src: logoTwix, height: 'h-16', rotate: 'rotate-12' }
+    ]);
+    // ---------------------------------------------------
+
     useEffect(() => {
         const checkUser = async () => {
             const { data: { user } } = await supabase.auth.getUser();
@@ -47,7 +59,6 @@ export default function Admin() {
         checkUser();
     }, [navigate]);
 
-    // Reseta seleções quando muda filtros
     useEffect(() => {
         fetchFotos();
         setSelectedIds([]);
@@ -68,7 +79,6 @@ export default function Admin() {
     async function fetchFotos() {
         setLoadingList(true);
         try {
-            // 1. Busca Dados da Página
             let query = supabase
                 .from('fotos')
                 .select('*', { count: 'exact' })
@@ -98,48 +108,39 @@ export default function Admin() {
         navigate('/login');
     }
 
-    // --- LÓGICA DE SELEÇÃO DUAL ---
-
-    // 1. Alternar item individual (Funciona apenas se NÃO estiver em modo Global)
     const toggleSelect = (id) => {
-        if (isGlobalSelection) return; // Bloqueia desmarcar se tudo estiver selecionado
+        if (isGlobalSelection) return;
         setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
     };
 
-    // 2. Selecionar PÁGINA ATUAL
     const toggleSelectPage = () => {
-        setIsGlobalSelection(false); // Sai do modo global
+        setIsGlobalSelection(false);
         if (selectedIds.length === fotos.length) {
-            setSelectedIds([]); // Desmarcar página
+            setSelectedIds([]);
         } else {
-            setSelectedIds(fotos.map(f => f.id)); // Marcar página
+            setSelectedIds(fotos.map(f => f.id));
         }
     };
 
-    // 3. Selecionar TUDO DO DIA (Global)
     const toggleSelectGlobal = () => {
         if (isGlobalSelection) {
             setIsGlobalSelection(false);
             setSelectedIds([]);
         } else {
             setIsGlobalSelection(true);
-            setSelectedIds([]); // Limpa IDs locais, pois usaremos lógica global
+            setSelectedIds([]);
         }
     };
 
-    // --- LÓGICA DE EXCLUSÃO HÍBRIDA ---
     async function handleBulkDelete() {
-        // MODO 1: EXCLUSÃO GLOBAL (TUDO DO DIA)
         if (isGlobalSelection) {
             const confirmacao = prompt(`PERIGO ⚠️\n\nVocê vai apagar TODAS as ${totalFotosDia} fotos do Dia ${dia}.\nIsso não tem volta!\n\nDigite "DELETAR" para confirmar:`);
             if (confirmacao !== "DELETAR") return;
 
-            setLoading(true); // Usa loading principal para bloquear tela
+            setLoading(true);
             try {
-                // A. Buscar TODAS as fotos do dia (para pegar as URLs pro R2)
-                // Fazemos em loops para não estourar memória se tiver milhoes
                 let temMais = true;
                 let page = 0;
                 let totalApagado = 0;
@@ -149,7 +150,7 @@ export default function Admin() {
                         .from('fotos')
                         .select('id, url_imagem, dia_evento')
                         .eq('dia_evento', dia)
-                        .range(page * 100, (page * 100) + 99); // Lotes de 100
+                        .range(page * 100, (page * 100) + 99);
 
                     if (error) throw error;
                     if (!lote || lote.length === 0) {
@@ -157,18 +158,15 @@ export default function Admin() {
                         break;
                     }
 
-                    // B. Deletar do R2
                     await Promise.all(lote.map(async (f) => {
                         const key = `${f.dia_evento}/${f.url_imagem.split('/').pop()}`;
                         await r2.send(new DeleteObjectCommand({ Bucket: "fotos-evento", Key: key }));
                     }));
 
-                    // C. Deletar do Supabase (IDs deste lote)
                     const idsLote = lote.map(f => f.id);
                     await supabase.from('fotos').delete().in('id', idsLote);
 
                     totalApagado += lote.length;
-                    // Não incrementamos 'page' porque ao deletar, os itens somem e a página 0 vira os próximos itens
                 }
 
                 setMensagem({ type: 'success', text: `LIMPEZA TOTAL! ${totalApagado} fotos apagadas.` });
@@ -181,15 +179,12 @@ export default function Admin() {
             } finally {
                 setLoading(false);
             }
-        }
-
-        // MODO 2: EXCLUSÃO LOCAL (SELECIONADOS NA PÁGINA)
-        else {
+        } else {
             if (selectedIds.length === 0) return;
             if (!confirm(`Apagar ${selectedIds.length} fotos selecionadas?`)) return;
 
             const fotosParaDeletar = fotos.filter(f => selectedIds.includes(f.id));
-            setFotos(prev => prev.filter(f => !selectedIds.includes(f.id))); // UI Optimista
+            setFotos(prev => prev.filter(f => !selectedIds.includes(f.id)));
             setSelectedIds([]);
 
             try {
@@ -208,7 +203,6 @@ export default function Admin() {
         }
     }
 
-    // Deletar Individual
     async function handleDelete(id, url, diaEvento, e) {
         if (e) e.stopPropagation();
         if (!confirm("Apagar foto?")) return;
@@ -225,7 +219,6 @@ export default function Admin() {
         }
     }
 
-    // UPLOAD (MANTIDO IGUAL)
     async function handleBatchUpload(e) {
         e.preventDefault();
         if (!files.length) { setMensagem({ type: 'error', text: "Selecione fotos!" }); return; }
@@ -264,21 +257,22 @@ export default function Admin() {
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center p-6 relative overflow-x-hidden font-sans pb-32">
 
-            {/* BACKGROUND */}
-            <div className="fixed inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none z-0">
-                <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
-                    {[...Array(6)].map((_, i) => (
-                        <div key={i} className="flex gap-24 items-center">
-                            <img src={bonecoMM} className="h-24 w-auto drop-shadow-xl rotate-12" alt="boneco" />
-                            <img src={logoSnickers} className="h-14 w-auto drop-shadow-lg" alt="logo" />
-                            <img src={pacoteMM} className="h-28 w-auto drop-shadow-xl -rotate-6" alt="pacote" />
-                            <img src={barraSnickers} className="h-12 w-auto drop-shadow-lg rotate-12" alt="barra" />
-                        </div>
+            {/* BACKGROUND ATUALIZADO E CORRIGIDO (SEM SOBREPOSIÇÃO) */}
+            <div className="fixed inset-0 flex items-center justify-center opacity-30 pointer-events-none select-none z-0">
+                {/* Aumentei o gap principal para gap-32 e removi os divs aninhados */}
+                <div className="w-[300%] flex gap-32 animate-marquee whitespace-nowrap py-16 items-center -rotate-[15deg]">
+                    {marcasParaFaixa.map((marca, i) => (
+                        // O 'shrink-0' é essencial aqui para elas não se esmagarem
+                        <img
+                            key={i}
+                            src={marca.src}
+                            className={`${marca.height} w-auto drop-shadow-xl ${marca.rotate} shrink-0`}
+                            alt="Brand Logo"
+                        />
                     ))}
                 </div>
             </div>
 
-            {/* BOTÃO FLUTUANTE DE EXCLUSÃO */}
             {(selectedIds.length > 0 || isGlobalSelection) && (
                 <div className="fixed bottom-6 z-50 animate-in slide-in-from-bottom-10 fade-in duration-300 w-full px-6 max-w-lg flex justify-center">
                     <button
@@ -294,7 +288,6 @@ export default function Admin() {
                 </div>
             )}
 
-            {/* PREVIEW */}
             {previewFoto && (
                 <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col animate-in fade-in duration-200">
                     <div className="bg-[#4e3629] p-4 flex items-center justify-between shadow-xl border-b-4 border-[#0072bc]">
@@ -316,7 +309,8 @@ export default function Admin() {
             <div className="bg-white p-8 rounded-[3rem] shadow-[0_12px_0_0_#4e3629] w-full max-w-lg border-4 border-[#4e3629] z-20 relative my-auto">
                 <div className="flex flex-col items-center mb-8">
                     <div className="bg-[#df0024] p-4 rounded-full mb-3 shadow-[0_5px_0_0_#a0001a] border-4 border-white">
-                        <img src={bonecoMM} className="w-10 h-10 object-contain" />
+                        {/* BONECO MANTIDO NO HEADER DO CARD */}
+                        <img src={bonecoMM} className="w-10 h-10 object-contain" alt="M&M Boneco" />
                     </div>
                     <h1 className="text-2xl font-[900] text-[#4e3629] tracking-tight uppercase italic">Upload em Massa</h1>
                 </div>
@@ -395,7 +389,6 @@ export default function Admin() {
                             <div className="flex flex-col items-center justify-center h-40 text-gray-300 border-2 border-dashed border-gray-100 rounded-2xl"><ImageIcon size={32} className="mb-2 opacity-50" /><p className="text-xs font-bold">Nenhuma foto encontrada</p></div>
                         ) : (
                             fotos.map((foto) => {
-                                // Se for Global, todos parecem selecionados. Se for Local, verifica ID.
                                 const isSelected = isGlobalSelection || selectedIds.includes(foto.id);
                                 return (
                                     <div

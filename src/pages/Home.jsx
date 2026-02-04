@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { supabase } from '../supabaseClient';
 import { Search, Download, AlertCircle, Loader2, X, Clock } from 'lucide-react';
 
+// IMAGEM DO BONECO (MANTIDA NO HEADER)
 import bonecoMM from '../imgs/boneco_vermelho_mm.png';
-import pacoteMM from '../imgs/PacotedeMM.png';
-import logoSnickers from '../imgs/LogoSnickers.png';
-import barraSnickers from '../imgs/barrasnickers.png';
+
+// NOVAS LOGOS PARA O BACKGROUND (SVG)
+import logoMM from '../imgs/MMS_MARCA.svg';
+import logoSnickers from '../imgs/SNICKERS_MARCA.PNG';
+import logoTwix from '../imgs/TWIX_MARCA.PNG';
 
 const COOLDOWN_MINUTES = 10;
 const COOLDOWN_TIME = COOLDOWN_MINUTES * 60 * 1000;
@@ -21,6 +24,14 @@ export default function Home() {
     // MODAL E TRAVA
     const [showModal, setShowModal] = useState(false);
     const [minutosRestantes, setMinutosRestantes] = useState(0);
+
+    // --- PREPARAÇÃO DA FAIXA DE BACKGROUND (CORREÇÃO) ---
+    const marcasParaFaixa = [...Array(6)].flatMap(() => [
+        { src: logoMM, height: 'h-24', rotate: 'rotate-12' },
+        { src: logoSnickers, height: 'h-14', rotate: '-rotate-6' },
+        { src: logoTwix, height: 'h-16', rotate: 'rotate-12' }
+    ]);
+    // ---------------------------------------------------
 
     // Verifica se este número, NESTE DIA, já foi baixado
     const obterTempoRestante = (num, d) => {
@@ -109,16 +120,18 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center relative overflow-hidden font-sans">
-            {/* BACKGROUND */}
+            {/* BACKGROUND ATUALIZADO E CORRIGIDO (SEM SOBREPOSIÇÃO) */}
             <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none">
-                <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
-                    {[...Array(6)].map((_, i) => (
-                        <div key={i} className="flex gap-24 items-center">
-                            <img src={bonecoMM} className="h-24 w-auto drop-shadow-xl rotate-12" alt="boneco" />
-                            <img src={logoSnickers} className="h-14 w-auto drop-shadow-lg" alt="logo" />
-                            <img src={pacoteMM} className="h-28 w-auto drop-shadow-xl -rotate-6" alt="pacote" />
-                            <img src={barraSnickers} className="h-12 w-auto drop-shadow-lg rotate-12" alt="barra" />
-                        </div>
+                {/* Gap aumentado para 32 e estrutura plana */}
+                <div className="w-[300%] flex gap-32 animate-marquee whitespace-nowrap py-16 items-center -rotate-[15deg]">
+                    {marcasParaFaixa.map((marca, i) => (
+                        // shrink-0 essencial aqui
+                        <img
+                            key={i}
+                            src={marca.src}
+                            className={`${marca.height} w-auto drop-shadow-xl ${marca.rotate} shrink-0`}
+                            alt="Brand Logo"
+                        />
                     ))}
                 </div>
             </div>
@@ -126,6 +139,7 @@ export default function Home() {
             <div className="z-20 w-full flex flex-col items-center px-4">
                 <header className="flex flex-col items-center pt-12 pb-8">
                     <div className="bg-[#df0024] p-5 rounded-full mb-4 shadow-[0_8px_0_0_#a0001a] border-4 border-white animate-bounce">
+                        {/* BONECO MANTIDO NO HEADER */}
                         <img src={bonecoMM} className="w-12 h-12 object-contain" alt="M&M" />
                     </div>
                     <h1 className="text-4xl font-[900] text-[#4e3629] tracking-tighter text-center uppercase italic">
