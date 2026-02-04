@@ -12,15 +12,17 @@ const COOLDOWN_TIME = COOLDOWN_MINUTES * 60 * 1000;
 
 export default function Home() {
     const [numero, setNumero] = useState('');
-    const [dia, setDia] = useState('07');
+    const [dia, setDia] = useState('07'); // Começa no dia 07
     const [foto, setFoto] = useState(null);
     const [loading, setLoading] = useState(false);
     const [downloading, setDownloading] = useState(false);
     const [erro, setErro] = useState('');
 
+    // MODAL E TRAVA
     const [showModal, setShowModal] = useState(false);
     const [minutosRestantes, setMinutosRestantes] = useState(0);
 
+    // Verifica se este número, NESTE DIA, já foi baixado
     const obterTempoRestante = (num, d) => {
         const lastDownload = localStorage.getItem(`ld_${d}_${num}`);
         if (lastDownload) {
@@ -36,6 +38,8 @@ export default function Home() {
         e.preventDefault();
         if (!numero) return;
 
+        // A trava é específica por dia também. 
+        // Se eu baixei a foto 1 do dia 07, não fico bloqueado na foto 1 do dia 08.
         const tempo = obterTempoRestante(numero, dia);
         if (tempo > 0) {
             setMinutosRestantes(tempo);
@@ -48,21 +52,24 @@ export default function Home() {
         setFoto(null);
 
         try {
+            // A MÁGICA ACONTECE AQUI:
+            // Filtramos pelo NÚMERO e pelo DIA
             const { data, error } = await supabase
                 .from('fotos')
                 .select('url_imagem')
                 .eq('numero_foto', parseInt(numero))
-                .eq('dia_evento', dia);
+                .eq('dia_evento', dia); // <--- Isso garante a separação dos dias
 
             if (error) throw error;
+
             if (data && data.length > 0) {
+                // Pega a última versão (caso tenha re-upload)
                 setFoto(data[data.length - 1].url_imagem);
             } else {
-                // MENSAGEM DE ERRO ATUALIZADA
-                setErro('Foto não encontrada. Veja se o número está certo!');
+                setErro(`Foto ${numero} não encontrada no dia ${dia}. Verifique o dia e o número!`);
             }
         } catch (err) {
-            setErro('Erro na busca. Tente de novo!');
+            setErro('Erro de conexão. Tente novamente!');
         } finally {
             setLoading(false);
         }
@@ -76,12 +83,16 @@ export default function Home() {
             const urlBlob = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = urlBlob;
-            link.setAttribute('download', `FOTO_${nomeFoto}.jpg`);
+
+            // O nome do arquivo baixado inclui o dia para evitar confusão no celular do usuário
+            link.setAttribute('download', `FOTO_DIA${dia}_${nomeFoto}.jpg`);
+
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
 
+            // Salva a trava
             localStorage.setItem(`ld_${dia}_${numero}`, Date.now().toString());
 
             setTimeout(() => {
@@ -98,6 +109,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen bg-[#ffcc00] flex flex-col items-center relative overflow-hidden font-sans">
+            {/* BACKGROUND */}
             <div className="absolute inset-0 flex items-center justify-center opacity-50 pointer-events-none select-none">
                 <div className="w-[300%] flex gap-24 animate-marquee whitespace-nowrap py-12 items-center -rotate-[15deg]">
                     {[...Array(6)].map((_, i) => (
@@ -123,9 +135,11 @@ export default function Home() {
 
                 <div className="w-full max-w-md bg-white p-8 rounded-[3rem] shadow-[0_12px_0_0_#4e3629] border-4 border-[#4e3629] mb-12">
                     <form onSubmit={buscarFoto} className="flex flex-col gap-6">
+
+                        {/* SELETOR DE DIA */}
                         <div className="flex bg-[#4e3629] p-2 rounded-full border-2 border-[#4e3629]">
                             {['07', '08'].map(d => (
-                                <button key={d} type="button" onClick={() => setDia(d)}
+                                <button key={d} type="button" onClick={() => { setDia(d); setFoto(null); setErro(''); }}
                                     className={`flex-1 py-3 rounded-full font-black text-xs transition-all ${dia === d ? 'bg-[#0072bc] text-white shadow-md' : 'text-gray-300'}`}>
                                     DIA {d}
                                 </button>
@@ -179,7 +193,7 @@ export default function Home() {
                         </div>
                         <div className="p-8 text-center">
                             <p className="text-[#4e3629] font-bold text-lg leading-tight mb-6">
-                                Por segurança, você só pode baixar a mesma foto uma vez a cada {COOLDOWN_MINUTES} minutos.
+                                Você já baixou essa foto. Tente novamente em {COOLDOWN_MINUTES} minutos.
                             </p>
                             <div className="bg-gray-100 p-4 rounded-2xl mb-8">
                                 <p className="text-xs font-black text-[#0072bc] uppercase tracking-widest mb-1">Tempo Restante</p>
