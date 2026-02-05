@@ -76,14 +76,39 @@ export default function Home() {
         }
     }
 
+    // --- FUNÇÃO DE DOWNLOAD COM DEBUG E CACHE BUSTER ---
     async function baixarImagem(url, nomeFoto) {
         setDownloading(true);
+
+        // 1. TRUQUE DO CACHE BUSTER:
+        // Adiciona um timestamp na URL para garantir que o navegador/Cloudflare
+        // não entregue uma versão velha "sem headers" do cache.
+        const urlComCacheBuster = `${url}?cache_bypass=${Date.now()}`;
+
+        console.group("🔍 DEBUG DOWNLOAD");
+        console.log("1. URL Original:", url);
+        console.log("2. URL Fresca (Buster):", urlComCacheBuster);
+
         try {
-            // Tenta baixar via Javascript (Automático)
-            const response = await fetch(url, { mode: 'cors' });
-            if (!response.ok) throw new Error('Bloqueio de segurança');
+            console.log("3. Iniciando Fetch...");
+            const response = await fetch(urlComCacheBuster, {
+                method: 'GET',
+                mode: 'cors',
+                headers: {
+                    // Tenta forçar o Cloudflare a não usar cache
+                    'Pragma': 'no-cache',
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            console.log("4. Status da Resposta:", response.status);
+            console.log("5. Headers Recebidos:", [...response.headers.entries()]);
+
+            if (!response.ok) throw new Error(`Erro HTTP: ${response.status}`);
 
             const blob = await response.blob();
+            console.log("6. Blob criado com sucesso. Tamanho:", blob.size);
+
             const urlBlob = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = urlBlob;
@@ -93,14 +118,20 @@ export default function Home() {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlBlob);
 
+            console.log("7. Download disparado com sucesso!");
+            console.groupEnd();
+
             // Sucesso
             localStorage.setItem(`ld_${dia}_${numero}`, Date.now().toString());
             setTimeout(() => { setFoto(null); setNumero(''); }, 3000);
 
         } catch (err) {
-            console.error("CORS Bloqueou:", err);
-            // SE FALHAR: Avisa o usuário para usar o Plano B (Botão Branco)
-            alert("⚠️ O download automático foi bloqueado pelo navegador.\n\nPor favor, toque no botão BRANCO abaixo escrito 'ABRIR FOTO' e salve manualmente.");
+            console.error("❌ ERRO NO DOWNLOAD:", err);
+            console.groupEnd();
+
+            // Fallback para o usuário não ficar na mão
+            window.open(url, '_blank');
+            alert("⚠️ Bloqueio detectado! A foto foi aberta em nova aba. Segure nela para salvar.");
         } finally {
             setDownloading(false);
         }
@@ -162,14 +193,12 @@ export default function Home() {
                                 <img src={foto} alt="Sua foto" className="w-full h-auto" />
                             </div>
 
-                            {/* BOTÃO VERDE (TENTA AUTOMÁTICO) */}
                             <button onClick={() => baixarImagem(foto, numero)} disabled={downloading}
                                 className="flex items-center justify-center gap-2 w-full p-5 bg-[#00aa55] text-white rounded-3xl font-black text-xl shadow-[0_8px_0_0_#007a3d] hover:bg-[#00c060] active:translate-y-1 active:shadow-none transition-all">
                                 {downloading ? <Loader2 className="animate-spin" /> : <Download size={24} />}
                                 {downloading ? 'BAIXANDO...' : 'BAIXAR FOTO'}
                             </button>
 
-                            {/* BOTÃO BRANCO (SOLUÇÃO DE EMERGÊNCIA) */}
                             <a href={foto} target="_blank" rel="noopener noreferrer"
                                 className="flex items-center justify-center gap-2 w-full p-4 bg-white border-4 border-[#0072bc] text-[#0072bc] rounded-3xl font-black text-sm uppercase hover:bg-blue-50 transition-all text-center">
                                 <ExternalLink size={16} />
